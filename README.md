@@ -4,6 +4,8 @@ Lightweight **HATEOAS / HAL** helpers for [Lucky](https://luckyframework.org/) (
 
 Makes it easy to add `_links` (and optionally `_embedded`) to your JSON API responses using Lucky’s type-safe route helpers.
 
+> **Development notice:** This shard is still under development and should not be used in production except at your own risk.
+
 ## Installation
 
 Add this to your `shard.yml`:
@@ -11,7 +13,7 @@ Add this to your `shard.yml`:
 ```yaml
 dependencies:
   lucky_hateoas:
-    github: franciscoGPS/lucky_hateoas # change to the real repo
+    github: franciscoGPS/lucky_hateoas
     version: ~> 0.1.0
 ```
 
