@@ -11,7 +11,7 @@ Add this to your `shard.yml`:
 ```yaml
 dependencies:
   lucky_hateoas:
-    github: your-username/lucky_hateoas # change to the real repo
+    github: franciscoGPS/lucky_hateoas # change to the real repo
     version: ~> 0.1.0
 ```
 

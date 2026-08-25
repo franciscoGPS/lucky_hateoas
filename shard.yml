@@ -2,7 +2,8 @@ name: lucky_hateoas
 version: 0.1.0
 
 authors:
-  - Your Name <you@example.com>
+  - Grok
+  - Francisco C. <fco.coma@gmail.com>
 
 crystal: ">= 1.6.0, < 2.0.0"
 
