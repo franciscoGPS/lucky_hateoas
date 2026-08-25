@@ -1,4 +1,4 @@
-# hal
+# Crystal-Hal
 
 Lightweight **HAL / HATEOAS / HAL-FORMS** helpers for [Crystal](https://crystal-lang.org/).
 
