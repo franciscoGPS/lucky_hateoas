@@ -2,7 +2,7 @@ name: lucky_hateoas
 version: 0.1.0
 
 authors:
-  - Grok
+  - Grok 4.5
   - Francisco C. <fco.coma@gmail.com>
 
 crystal: ">= 1.6.0, < 2.0.0"
