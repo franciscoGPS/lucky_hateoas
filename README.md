@@ -15,8 +15,8 @@ Add this to your `shard.yml`:
 
 ```yaml
 dependencies:
-  lucky_hateoas:
-    github: franciscoGPS/lucky_hateoas
+  hal:
+    github: franciscoGPS/Crystal-Hal
     version: ~> 0.1.0
 ```
 
