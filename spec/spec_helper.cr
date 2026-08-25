@@ -1,2 +1,2 @@
 require "spec"
-require "../src/lucky_hateoas"
+require "../src/hal"

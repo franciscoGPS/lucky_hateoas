@@ -1,4 +1,4 @@
-name: lucky_hateoas
+name: hal
 version: 0.1.0
 
 authors:
@@ -8,9 +8,9 @@ authors:
 crystal: ">= 1.6.0, < 2.0.0"
 
 description: |
-  Lightweight HATEOAS / HAL / HAL-FORMS helpers for Lucky (Crystal).
-  Add `_links`, URI templates, pagination, affordances and `application/hal+json`
-  support using Lucky's type-safe route helpers.
+  Lightweight HAL / HATEOAS / HAL-FORMS helpers for Crystal.
+  Add `_links`, URI templates, pagination and affordances to JSON APIs.
+  Works with Lucky, Amber, Kemal, Athena, or any Crystal app.
 
 license: MIT
 

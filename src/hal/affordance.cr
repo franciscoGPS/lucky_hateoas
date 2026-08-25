@@ -1,26 +1,10 @@
 require "json"
 
-module LuckyHateoas
+module Hal
   # HAL-FORMS style affordance / form.
   #
   # An Affordance describes a possible state transition (action) the client can take.
-  # It is richer than a simple Link: it includes the HTTP method, content-type,
-  # and a list of fields the client should send.
-  #
   # Spec inspiration: https://rwcbook.github.io/hal-forms/
-  #
-  # Example:
-  #
-  #   Affordance.new(
-  #     name: "create-user",
-  #     href: "/api/users",
-  #     method: "POST",
-  #     title: "Create a new user"
-  #   ) do |f|
-  #     f.field "name", type: "text", required: true
-  #     f.field "email", type: "email", required: true
-  #     f.field "role", type: "text", value: "member"
-  #   end
   class Affordance
     getter name : String
     getter href : String
@@ -51,7 +35,6 @@ module LuckyHateoas
       @fields = [] of Field
     end
 
-    # Add a field to the form.
     def field(
       name : String,
       type : String = "text",
@@ -89,7 +72,6 @@ module LuckyHateoas
       h
     end
 
-    # A single form field (HAL-FORMS property).
     struct Field
       getter name : String
       getter type : String

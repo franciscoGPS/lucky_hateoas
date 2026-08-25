@@ -1,19 +1,7 @@
 require "json"
 
-module LuckyHateoas
+module Hal
   # Wraps data and adds hypermedia links + optional affordances (HAL / HAL-FORMS).
-  #
-  # Example:
-  #
-  #   resource = LuckyHateoas::Resource.new({id: 1, name: "Alice"}) do |r|
-  #     r.self "/users/1"
-  #     r.link "orders", "/users/1/orders"
-  #     r.template "search", "/users{?name,email}"
-  #     r.affordance("update-user", "/users/1", method: "PUT") do |f|
-  #       f.field "name", required: true
-  #       f.field "email", type: "email", required: true
-  #     end
-  #   end
   class Resource
     getter data : Hash(String, JSON::Any)
     getter links : Array(Link)
@@ -32,12 +20,10 @@ module LuckyHateoas
       @affordances = [] of Affordance
     end
 
-    # Adds the conventional "self" link.
     def self(target)
       add_link("self", target)
     end
 
-    # Adds a named link.
     def link(
       rel : String,
       target,
@@ -50,10 +36,6 @@ module LuckyHateoas
       add_link(rel, target, method: method, title: title, type: type, templated: templated, name: name)
     end
 
-    # Adds a URI-template link (RFC 6570). Shorthand for templated: true.
-    #
-    #   r.template "search", "/users{?page,name}"
-    #   r.template "filter", "/users{?status,role}", title: "Filter users"
     def template(rel : String, href : String, **options)
       @links << Link.template(
         href,
@@ -65,7 +47,6 @@ module LuckyHateoas
       )
     end
 
-    # Adds a HAL-FORMS affordance (state transition / form).
     def affordance(
       name : String,
       href,
@@ -95,14 +76,10 @@ module LuckyHateoas
       unless @links.empty?
         links_hash = Hash(String, JSON::Any).new
         @links.each do |link|
-          # Support multiple links with the same rel (HAL allows arrays)
           if existing = links_hash[link.rel]?
-            # convert single → array
             arr = case existing.raw
-                  when Array
-                    existing.as_a
-                  else
-                    [existing]
+                  when Array then existing.as_a
+                  else            [existing]
                   end
             arr << JSON::Any.new(link.to_h)
             links_hash[link.rel] = JSON::Any.new(arr)
@@ -114,7 +91,6 @@ module LuckyHateoas
       end
 
       unless @affordances.empty?
-        # HAL-FORMS puts templates under "_templates"
         templates = Hash(String, JSON::Any).new
         @affordances.each do |aff|
           templates[aff.name] = JSON::Any.new(aff.to_h)

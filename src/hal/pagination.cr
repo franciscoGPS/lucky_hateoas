@@ -1,30 +1,20 @@
-module LuckyHateoas
+module Hal
   # Helpers for RFC 5988 / HAL pagination links.
   #
   # Typical usage inside a Collection:
   #
-  #   collection = LuckyHateoas::Collection.new(items) do |c|
+  #   collection = Hal::Collection.new(items) do |c|
   #     c.pagination(
   #       page: 2,
   #       per_page: 20,
   #       total_pages: 5,
   #       total_count: 95,
-  #       base: "/api/users"          # or a route helper
+  #       base: "/api/users"
   #     )
   #   end
-  #
-  # Produces links: self, first, prev, next, last
-  # and optional page metadata.
   module Pagination
     extend self
 
-    # Build the standard set of pagination links.
-    #
-    # `base` can be:
-    # - a String path ("/api/users")
-    # - anything that responds to `#path` (Lucky route helper)
-    #
-    # Query param names default to `page` and `per`.
     def links(
       page : Int32,
       total_pages : Int32,
@@ -52,7 +42,6 @@ module LuckyHateoas
       result
     end
 
-    # Convenience metadata hash often placed alongside _links.
     def meta(page : Int32, per_page : Int32, total_pages : Int32, total_count : Int32? = nil) : Hash(String, Int32)
       h = {
         "page"        => page,
@@ -83,7 +72,6 @@ module LuckyHateoas
       query = "#{page_param}=#{page}"
       query += "&#{per_param}=#{per_page}" if per_page
 
-      # Preserve existing query string if present
       href = if base_path.includes?('?')
                "#{base_path}&#{query}"
              else

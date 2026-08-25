@@ -1,20 +1,7 @@
 require "json"
 
-module LuckyHateoas
+module Hal
   # Helper for collection / list endpoints with optional pagination.
-  #
-  # Example:
-  #
-  #   LuckyHateoas::Collection.new(items) do |c|
-  #     c.embedded_as "users"
-  #     c.pagination(
-  #       page: 2,
-  #       per_page: 20,
-  #       total_pages: 5,
-  #       total_count: 95,
-  #       base: "/api/users"
-  #     )
-  #   end
   class Collection
     getter items : Array(JSON::Any)
     getter links : Array(Link)
@@ -50,8 +37,6 @@ module LuckyHateoas
       @embedded_rel = rel
     end
 
-    # Adds standard pagination links (self, first, prev, next, last)
-    # and optional page metadata.
     def pagination(
       page : Int32,
       total_pages : Int32,

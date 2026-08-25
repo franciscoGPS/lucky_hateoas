@@ -1,31 +1,28 @@
-module LuckyHateoas
+module Hal
   # Convenience helpers. Include this module in your serializers or actions.
   module Helpers
-    # Build a Resource with a block.
-    def hateoas(data, &block : Resource ->)
+    def hal(data, &block : Resource ->)
       Resource.new(data, &block)
     end
 
-    def hateoas(data)
+    def hal(data)
       Resource.new(data)
     end
 
-    # Build a Collection with a block.
-    def hateoas_collection(items, &block : Collection ->)
+    def hal_collection(items, &block : Collection ->)
       Collection.new(items, &block)
     end
 
-    def hateoas_collection(items)
+    def hal_collection(items)
       Collection.new(items)
     end
 
-    # Media type constant shortcut.
     def hal_media_type : String
-      Hal::MEDIA_TYPE
+      Media::TYPE
     end
 
     def hal_forms_media_type : String
-      Hal::MEDIA_TYPE_FORMS
+      Media::TYPE_FORMS
     end
   end
 end

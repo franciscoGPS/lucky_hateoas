@@ -1,4 +1,4 @@
-module LuckyHateoas
+module Hal
   # Represents a single hypermedia link (HAL / HAL-FORMS style).
   #
   # Supports:

@@ -1,8 +1,13 @@
-# lucky_hateoas
+# hal
 
-Lightweight **HATEOAS / HAL / HAL-FORMS** helpers for [Lucky](https://luckyframework.org/) (Crystal).
+Lightweight **HAL / HATEOAS / HAL-FORMS** helpers for [Crystal](https://crystal-lang.org/).
 
-Add `_links`, URI templates, pagination, affordances and `application/hal+json` support using Lucky’s type-safe route helpers.
+Add `_links`, URI templates, pagination and affordances to your JSON APIs.
+Works with **Lucky**, Amber, Kemal, Athena, or any Crystal app — zero framework lock-in.
+
+## Why HAL for agents?
+
+Instead of dumping a huge static tool catalog into the LLM context (MCP tool bloat), the server emits only the links and forms valid **for the current state and user**. The agent discovers the next step from the response. Permissions stay on the server.
 
 ## Installation
 
@@ -15,8 +20,6 @@ dependencies:
     version: ~> 0.1.0
 ```
 
-Then run:
-
 ```bash
 shards install
 ```
@@ -24,40 +27,43 @@ shards install
 ## Quick start
 
 ```crystal
-require "lucky_hateoas"
+require "hal"
 
-class UserSerializer < BaseSerializer
-  include LuckyHateoas::Helpers
+include Hal::Helpers
 
-  def initialize(@user : User)
-  end
+resource = hal({
+  id:    1,
+  name:  "Alice",
+  email: "alice@example.com",
+}) do |r|
+  r.self  "/api/users/1"
+  r.link  "orders", "/api/users/1/orders"
+  r.link  "delete", "/api/users/1", method: "DELETE"
 
-  def render
-    hateoas({
-      id:    @user.id,
-      name:  @user.name,
-      email: @user.email,
-    }) do |r|
-      r.self  Users::Show.with(@user.id)
-      r.link  "orders", Orders::Index.with(user_id: @user.id)
-      r.link  "delete", Users::Delete.with(@user.id), method: "DELETE"
+  # URI template (RFC 6570)
+  r.template "search", "/api/users{?name,email}"
 
-      # URI template
-      r.template "search", "/api/users{?name,email}"
-
-      # HAL-FORMS affordance
-      r.affordance("update", Users::Update.with(@user.id), method: "PUT") do |f|
-        f.field "name",  required: true
-        f.field "email", type: "email", required: true
-      end
-    end.to_h
+  # HAL-FORMS affordance
+  r.affordance("update", "/api/users/1", method: "PUT") do |f|
+    f.field "name",  required: true
+    f.field "email", type: "email", required: true
   end
 end
+
+resource.to_h
+# or resource.to_json
+```
+
+With **Lucky** route helpers (anything that responds to `#path`):
+
+```crystal
+r.self  Users::Show.with(user.id)
+r.link  "orders", Orders::Index.with(user_id: user.id)
 ```
 
 ## Features
 
-### 1. Links & URI templates
+### Links & URI templates
 
 ```crystal
 r.self "/users/1"
@@ -65,112 +71,53 @@ r.link "orders", "/users/1/orders"
 r.template "search", "/users{?page,name,status}"   # → "templated": true
 ```
 
-### 2. Pagination helpers
+### Pagination
 
 ```crystal
-LuckyHateoas::Collection.new(users) do |c|
+Hal::Collection.new(items) do |c|
   c.embedded_as "users"
   c.pagination(
     page: 2,
     per_page: 20,
     total_pages: 5,
     total_count: 95,
-    base: "/api/users"          # or Users::Index
+    base: "/api/users"
   )
 end
 ```
 
-Produces:
+Produces `self`, `first`, `prev`, `next`, `last` links + `page` metadata.
 
-```json
-{
-  "_embedded": { "users": [ ... ] },
-  "_links": {
-    "self":  { "href": "/api/users?page=2&per=20" },
-    "first": { "href": "/api/users?page=1&per=20" },
-    "prev":  { "href": "/api/users?page=1&per=20" },
-    "next":  { "href": "/api/users?page=3&per=20" },
-    "last":  { "href": "/api/users?page=5&per=20" }
-  },
-  "page": {
-    "page": 2,
-    "per_page": 20,
-    "total_pages": 5,
-    "total_count": 95
-  }
-}
-```
-
-You can also call `LuckyHateoas::Pagination.links(...)` and `.meta(...)` directly.
-
-### 3. `application/hal+json` content-type
+### `application/hal+json`
 
 ```crystal
-class Api::Users::Show < ApiAction
-  get "/api/users/:user_id" do
-    user = UserQuery.find(user_id)
-    json UserSerializer.new(user), content_type: LuckyHateoas::Hal::MEDIA_TYPE
-  end
-end
+Hal::Media::TYPE         # => "application/hal+json"
+Hal::Media::TYPE_FORMS   # => "application/prs.hal-forms+json"
+Hal::Media.requested?(accept_header)
 ```
 
-Constants:
-
-- `LuckyHateoas::Hal::MEDIA_TYPE` → `application/hal+json`
-- `LuckyHateoas::Hal::MEDIA_TYPE_FORMS` → `application/prs.hal-forms+json`
-
-Helper to detect Accept header:
+### Affordances (HAL-FORMS)
 
 ```crystal
-LuckyHateoas::Hal.requested?(request.headers["Accept"]?)
-```
-
-### 4. Affordances / HAL-FORMS
-
-```crystal
-r.affordance("create-order", "/api/orders", method: "POST", title: "Create order") do |f|
+r.affordance("create-order", "/api/orders", method: "POST") do |f|
   f.field "product_id", type: "number", required: true
-  f.field "quantity",   type: "number", required: true, value: 1
-  f.field "note",       type: "text"
+  f.field "quantity",   type: "number", value: 1
 end
 ```
 
-Output under `_templates`:
+Emitted under `_templates`.
 
-```json
-"_templates": {
-  "create-order": {
-    "name": "create-order",
-    "href": "/api/orders",
-    "method": "POST",
-    "title": "Create order",
-    "contentType": "application/json",
-    "fields": [
-      { "name": "product_id", "type": "number", "required": true },
-      { "name": "quantity",   "type": "number", "required": true, "value": 1 },
-      { "name": "note",       "type": "text" }
-    ]
-  }
-}
-```
+## API
 
-## API overview
-
-| Class / Module             | Purpose                                    |
-| -------------------------- | ------------------------------------------ |
-| `LuckyHateoas::Link`       | Single link (supports `templated`)         |
-| `LuckyHateoas::Resource`   | Single resource + links + affordances      |
-| `LuckyHateoas::Collection` | List + `_embedded` + pagination            |
-| `LuckyHateoas::Pagination` | `links` + `meta` helpers                   |
-| `LuckyHateoas::Affordance` | HAL-FORMS style form / state transition    |
-| `LuckyHateoas::Hal`        | Media-type constants + Accept detection    |
-| `LuckyHateoas::Helpers`    | `hateoas`, `hateoas_collection`, shortcuts |
-
-## Design notes
-
-- **Zero hard dependency on Lucky** – just call `.path` / `.url` on route helpers.
-- Follows HAL and HAL-FORMS conventions.
-- Keeps the surface intentionally small.
+| Type              | Purpose                                 |
+| ----------------- | --------------------------------------- |
+| `Hal::Link`       | Single link (supports `templated`)      |
+| `Hal::Resource`   | Resource + links + affordances          |
+| `Hal::Collection` | List + `_embedded` + pagination         |
+| `Hal::Pagination` | `links` + `meta` helpers                |
+| `Hal::Affordance` | HAL-FORMS form / state transition       |
+| `Hal::Media`      | Media-type constants + Accept detection |
+| `Hal::Helpers`    | `hal`, `hal_collection`, shortcuts      |
 
 ## License
 
