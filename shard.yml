@@ -8,15 +8,11 @@ authors:
 crystal: ">= 1.6.0, < 2.0.0"
 
 description: |
-  Lightweight HATEOAS / HAL helpers for Lucky (Crystal).
-  Makes it easy to add `_links` (and optionally `_embedded`) to JSON API responses
-  using Lucky's type-safe route helpers.
+  Lightweight HATEOAS / HAL / HAL-FORMS helpers for Lucky (Crystal).
+  Add `_links`, URI templates, pagination, affordances and `application/hal+json`
+  support using Lucky's type-safe route helpers.
 
 license: MIT
-
-dependencies:
-  # No hard dependency on Lucky so it can be used more broadly.
-  # Just call .path / .url on your route helpers.
 
 development_dependencies:
   ameba:

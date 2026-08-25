@@ -1,10 +1,8 @@
 # lucky_hateoas
 
-Lightweight **HATEOAS / HAL** helpers for [Lucky](https://luckyframework.org/) (Crystal).
+Lightweight **HATEOAS / HAL / HAL-FORMS** helpers for [Lucky](https://luckyframework.org/) (Crystal).
 
-Makes it easy to add `_links` (and optionally `_embedded`) to your JSON API responses using Lucky’s type-safe route helpers.
-
-> **Development notice:** This shard is still under development and should not be used in production except at your own risk.
+Add `_links`, URI templates, pagination, affordances and `application/hal+json` support using Lucky’s type-safe route helpers.
 
 ## Installation
 
@@ -42,79 +40,137 @@ class UserSerializer < BaseSerializer
     }) do |r|
       r.self  Users::Show.with(@user.id)
       r.link  "orders", Orders::Index.with(user_id: @user.id)
-      r.link  "edit",   Users::Update.with(@user.id), method: "PUT"
+      r.link  "delete", Users::Delete.with(@user.id), method: "DELETE"
+
+      # URI template
+      r.template "search", "/api/users{?name,email}"
+
+      # HAL-FORMS affordance
+      r.affordance("update", Users::Update.with(@user.id), method: "PUT") do |f|
+        f.field "name",  required: true
+        f.field "email", type: "email", required: true
+      end
     end.to_h
   end
 end
 ```
 
-Result:
+## Features
+
+### 1. Links & URI templates
+
+```crystal
+r.self "/users/1"
+r.link "orders", "/users/1/orders"
+r.template "search", "/users{?page,name,status}"   # → "templated": true
+```
+
+### 2. Pagination helpers
+
+```crystal
+LuckyHateoas::Collection.new(users) do |c|
+  c.embedded_as "users"
+  c.pagination(
+    page: 2,
+    per_page: 20,
+    total_pages: 5,
+    total_count: 95,
+    base: "/api/users"          # or Users::Index
+  )
+end
+```
+
+Produces:
 
 ```json
 {
-  "id": 1,
-  "name": "John Doe",
-  "email": "john@example.com",
+  "_embedded": { "users": [ ... ] },
   "_links": {
-    "self": { "href": "/api/users/1" },
-    "orders": { "href": "/api/users/1/orders" },
-    "edit": { "href": "/api/users/1", "method": "PUT" }
+    "self":  { "href": "/api/users?page=2&per=20" },
+    "first": { "href": "/api/users?page=1&per=20" },
+    "prev":  { "href": "/api/users?page=1&per=20" },
+    "next":  { "href": "/api/users?page=3&per=20" },
+    "last":  { "href": "/api/users?page=5&per=20" }
+  },
+  "page": {
+    "page": 2,
+    "per_page": 20,
+    "total_pages": 5,
+    "total_count": 95
+  }
+}
+```
+
+You can also call `LuckyHateoas::Pagination.links(...)` and `.meta(...)` directly.
+
+### 3. `application/hal+json` content-type
+
+```crystal
+class Api::Users::Show < ApiAction
+  get "/api/users/:user_id" do
+    user = UserQuery.find(user_id)
+    json UserSerializer.new(user), content_type: LuckyHateoas::Hal::MEDIA_TYPE
+  end
+end
+```
+
+Constants:
+
+- `LuckyHateoas::Hal::MEDIA_TYPE` → `application/hal+json`
+- `LuckyHateoas::Hal::MEDIA_TYPE_FORMS` → `application/prs.hal-forms+json`
+
+Helper to detect Accept header:
+
+```crystal
+LuckyHateoas::Hal.requested?(request.headers["Accept"]?)
+```
+
+### 4. Affordances / HAL-FORMS
+
+```crystal
+r.affordance("create-order", "/api/orders", method: "POST", title: "Create order") do |f|
+  f.field "product_id", type: "number", required: true
+  f.field "quantity",   type: "number", required: true, value: 1
+  f.field "note",       type: "text"
+end
+```
+
+Output under `_templates`:
+
+```json
+"_templates": {
+  "create-order": {
+    "name": "create-order",
+    "href": "/api/orders",
+    "method": "POST",
+    "title": "Create order",
+    "contentType": "application/json",
+    "fields": [
+      { "name": "product_id", "type": "number", "required": true },
+      { "name": "quantity",   "type": "number", "required": true, "value": 1 },
+      { "name": "note",       "type": "text" }
+    ]
   }
 }
 ```
 
 ## API overview
 
-### `LuckyHateoas::Resource`
-
-Wraps a single resource and adds links.
-
-```crystal
-resource = LuckyHateoas::Resource.new(user) do |r|
-  r.self Users::Show.with(user.id)                 # rel = "self"
-  r.link "orders", Orders::Index.with(...)         # custom rel
-  r.link "delete", Users::Delete.with(...), method: "DELETE"
-end
-
-resource.to_h   # => Hash ready for json response
-resource.to_json
-```
-
-### `LuckyHateoas::Collection`
-
-For list endpoints:
-
-```crystal
-LuckyHateoas::Collection.new(users) do |c|
-  c.self Users::Index
-  c.link "next", Users::Index.with(page: 2)
-  c.embedded_as "users"
-end.to_h
-```
-
-### `LuckyHateoas::Link`
-
-Low-level link object (you rarely need it directly).
+| Class / Module             | Purpose                                    |
+| -------------------------- | ------------------------------------------ |
+| `LuckyHateoas::Link`       | Single link (supports `templated`)         |
+| `LuckyHateoas::Resource`   | Single resource + links + affordances      |
+| `LuckyHateoas::Collection` | List + `_embedded` + pagination            |
+| `LuckyHateoas::Pagination` | `links` + `meta` helpers                   |
+| `LuckyHateoas::Affordance` | HAL-FORMS style form / state transition    |
+| `LuckyHateoas::Hal`        | Media-type constants + Accept detection    |
+| `LuckyHateoas::Helpers`    | `hateoas`, `hateoas_collection`, shortcuts |
 
 ## Design notes
 
-- **Zero hard dependency on Lucky** – just call `.path` / `.url` on whatever your route helpers return.
-- Follows the common **HAL** conventions (`_links`, `_embedded`).
-- Keeps the surface small on purpose. The goal is practical HATEOAS, not a full Spring HATEOAS port.
-
-## Roadmap (ideas)
-
-- [ ] Better support for URI templates (`templated: true`)
-- [ ] Pagination helpers (page, next, prev, first, last)
-- [ ] Optional `application/hal+json` content-type helper
-- [ ] Affordances / forms (HAL-FORMS style)
-
-## Contributing
-
-1. Fork it
-2. Create your feature branch
-3. Commit your changes
-4. Push and open a Pull Request
+- **Zero hard dependency on Lucky** – just call `.path` / `.url` on route helpers.
+- Follows HAL and HAL-FORMS conventions.
+- Keeps the surface intentionally small.
 
 ## License
 
